@@ -1,54 +1,15 @@
-# Шаблон для выполнения тестового задания
+**Инструкция по настройке и запуску приложения**
 
-## Описание
-Шаблон подготовлен для того, чтобы попробовать сократить трудоемкость выполнения тестового задания.
+В корне проекта находится файл .env.example. Скопируйте его в новый файл .env, чтобы настроить окружение для приложения.
+Заполните .env файл:
+- **API_KEY** - ваш API ключ для доступа к данным WB API.
+- **GOOGLE_PRIVATE_KEY** - private_key из Google Cloud Console. (пр.:-----BEGIN PRIVATE KEY-----\n PRIVATE KEY\n-----END PRIVATE KEY-----\n)
+- **GOOGLE_CLIENT_EMAIL** - client_email из Google Cloud Console. (пр.:sheets-api-bot@your-project-id.iam.gserviceaccount.com )
+- **GOOGLE_PROJECT_ID** - project_id из Google Cloud Console. (пр.: your-project-id)
+- **GOOGLE_SPREADSHEET_IDS** - здесь через запятую указываются ID ваших таблиц, которые можно получить из URL.
+Например:
+URL: https://docs.google.com/spreadsheets/d/1RAO7kwOlSIgt7J6_XIK6nex1nXIWZb0NNdVjqB74dvM/edit
+GOOGLE_SPREADSHEET_IDS:1RAO7kwOlSIgt7J6_XIK6nex1nXIWZb0NNdVjqB74dvM
 
-В шаблоне настоены контейнеры для `postgres` и приложения на `nodejs`.  
-Для взаимодействия с БД используется `knex.js`.  
-В контейнере `app` используется `build` для приложения на `ts`, но можно использовать и `js`.
-
-Шаблон не является обязательным!\
-Можно использовать как есть или изменять на свой вкус.
-
-Все настройки можно найти в файлах:
-- compose.yaml
-- dockerfile
-- package.json
-- tsconfig.json
-- src/config/env/env.ts
-- src/config/knex/knexfile.ts
-
-## Команды:
-
-Запуск базы данных:
-```bash
-docker compose up -d --build postgres
-```
-
-Для выполнения миграций и сидов не из контейнера:
-```bash
-npm run knex:dev migrate latest
-```
-
-```bash
-npm run knex:dev seed run
-```
-Также можно использовать и остальные команды (`migrate make <name>`,`migrate up`, `migrate down` и т.д.)
-
-Для запуска приложения в режиме разработки:
-```bash
-npm run dev
-```
-
-Запуск проверки самого приложения:
-```bash
-docker compose up -d --build app
-```
-
-Для финальной проверки рекомендую:
-```bash
-docker compose down --rmi local --volumes
+Соберите и запустите контейнер с помощью Docker Compose:
 docker compose up --build
-```
-
-PS: С наилучшими пожеланиями!

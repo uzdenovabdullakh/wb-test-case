@@ -3,11 +3,32 @@
  * @returns {Promise<void>}
  */
 export async function seed(knex) {
-    // Deletes ALL existing entries
-    await knex("table_name").del();
-    await knex("table_name").insert([
-        { id: 1, colName: "rowValue1" },
-        { id: 2, colName: "rowValue2" },
-        { id: 3, colName: "rowValue3" },
-    ]);
+    await knex("spreadsheets").del();
+
+    const apiData = [
+        {
+            "boxDeliveryAndStorageExpr": "125",
+            "boxDeliveryBase": "47.5",
+            "boxDeliveryLiter": "11.88",
+            "boxStorageBase": null,
+            "boxStorageLiter": null,
+            "warehouseName": "Маркетплейс",
+            "dtNextBox": null,
+            "dtTillMax": "2025-03-10"
+        },
+    ];
+
+    const formattedData = apiData.map(warehouse => ({
+        boxDeliveryAndStorageExpr: warehouse.boxDeliveryAndStorageExpr,
+        boxDeliveryBase: warehouse.boxDeliveryBase,
+        boxDeliveryLiter: warehouse.boxDeliveryLiter,
+        boxStorageBase: warehouse.boxStorageBase,
+        boxStorageLiter: warehouse.boxStorageLiter,
+        warehouseName: warehouse.warehouseName,
+        dtNextBox: warehouse.dtNextBox || null,
+        dtTillMax: warehouse.dtTillMax,
+        currentDay: new Date().toISOString().split("T")[0]
+    }));
+
+    await knex("spreadsheets").insert(formattedData);
 }

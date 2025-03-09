@@ -4,11 +4,14 @@
         "module": "NodeNext",
         "target": "es2017",
         "esModuleInterop": true,
+        "moduleResolution": "NodeNext",
+        "resolveJsonModule": true,
         "allowJs": true,
         "checkJs": true,
         "skipLibCheck": true,
         "rootDir": "./src",
         "outDir": "./dist",
+        "types": ["node"],
         "paths": {
             "#*": [
                 "./src/*",
