@@ -17,7 +17,7 @@ export function createAPI(
     });
 
     api.interceptors.request.use((config) => {
-        config.headers["Api-key"] = apiKey;
+        config.headers["Authorization"] = `Bearer ${apiKey}`;
 
         return config;
     });

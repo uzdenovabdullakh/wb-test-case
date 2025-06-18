@@ -12,7 +12,7 @@ export class WBTariffsParser {
     private readonly apiBaseUrl =
         "https://common-api.wildberries.ru/api/v1/tariffs/";
     private readonly wbTariffsBoxUri = "box";
-    private readonly apiKey = "";
+    private readonly apiKey = process.env.WB_API_KEY as string;
 
     private syncTask: ScheduledTask | null = null;
     private api: AxiosInstance;
