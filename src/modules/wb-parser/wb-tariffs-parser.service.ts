@@ -1,10 +1,11 @@
 import cron, { ScheduledTask } from "node-cron";
+import { AxiosInstance } from "axios";
+
+import { createAPI } from "#services/api.js";
 
 import { CRON_SCHEDULE } from "./constants.js";
 
 import { WBDataType } from "./types/wb-data.type.js";
-import { AxiosInstance } from "axios";
-import { createAPI } from "#services/api.js";
 
 export class WBTariffsParser {
     private readonly loggerPrefix = "[WBParser]";
@@ -14,7 +15,7 @@ export class WBTariffsParser {
     private readonly apiKey = "";
 
     private syncTask: ScheduledTask | null = null;
-    private api: AxiosInstance = null;
+    private api: AxiosInstance;
 
     constructor() {
         this.api = createAPI(this.apiBaseUrl, this.apiKey);
@@ -69,7 +70,7 @@ export class WBTariffsParser {
     private async parse(): Promise<WBDataType | void> {
         console.log(`${this.loggerPrefix} WB Parse task is running ...`);
 
-        await this.api.get(this.wbTariffsBoxUri);
+        // await this.api.get(this.wbTariffsBoxUri);
     }
 
     private async insertDataToGoogleSpreadSheet(data: WBDataType) {
