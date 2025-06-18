@@ -1,3 +1,4 @@
+import path from "path";
 import cron, { ScheduledTask } from "node-cron";
 import { AxiosInstance } from "axios";
 
@@ -6,6 +7,7 @@ import { createAPI } from "#services/api.js";
 import { CRON_SCHEDULE } from "./constants.js";
 
 import { WBDataType } from "./types/wb-data.type.js";
+import { google } from "googleapis";
 
 export class WBTariffsParser {
     private readonly loggerPrefix = "[WBParser]";
@@ -32,7 +34,7 @@ export class WBTariffsParser {
 
         // First launch
         if (!this.syncTask) {
-            await this.parse();
+            await this.parseAndUpload();
         }
 
         if (this.syncTask) {
@@ -51,6 +53,8 @@ export class WBTariffsParser {
 
     private async parseAndUpload() {
         try {
+            await this.insertDataToGoogleSpreadSheet(null);
+
             // Fetch data from WB
             const wbData = await this.parse();
 
@@ -73,7 +77,34 @@ export class WBTariffsParser {
         // await this.api.get(this.wbTariffsBoxUri);
     }
 
-    private async insertDataToGoogleSpreadSheet(data: WBDataType) {
-        console.log(`Data to insert to GoogleSpreadsheet: `, data);
+    private async insertDataToGoogleSpreadSheet(data: WBDataType | null) {
+        const googleServiceKeysFileName = process.env
+            .GOOGLE_SERVICE_KEYS_JSON as string;
+        const googleServiceKeysFile = path.resolve(googleServiceKeysFileName);
+        const serviceSheetName = process.env.GOOGLE_SERVICE_SHEET_NAME;
+
+        if (!googleServiceKeysFile) {
+            console.error(
+                `Can't find Google Service Account Credentials file (${googleServiceKeysFileName}) in the root folder`,
+            );
+
+            return;
+        }
+
+        if (!serviceSheetName) {
+            console.error(`Can't find Google Spreadsheet Name`);
+
+            return;
+        }
+
+        console.log("Auth in Google Spreadsheet API`s ... ");
+
+        const auth = new google.Auth.GoogleAuth({
+            keyFile: googleServiceKeysFile,
+            scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+        });
+        const sheets = new google.sheets_v4.Sheets({ auth });
+
+        console.log("GOOGLE AUTH: ", auth);
     }
 }
