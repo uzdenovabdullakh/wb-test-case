@@ -1,4 +1,4 @@
-type WarehouseType = {
+export type WarehouseType = {
     boxDeliveryAndStorageExpr: string;
     boxDeliveryBase: string;
     boxDeliveryLiter: string;
@@ -10,7 +10,7 @@ type WarehouseType = {
 type DataType = {
     dtNextBox: string;
     dtTillMax: string;
-    warehouseList: WarehouseType;
+    warehouseList: WarehouseType[];
 };
 
 type ResponseType = {
@@ -20,3 +20,8 @@ type ResponseType = {
 export type WBDataType = {
     response: ResponseType;
 };
+
+export type WBAdaptedDataType = {
+    dtNextBox: string;
+    dtTillMax: string;
+} & WarehouseType;

@@ -1,5 +1,5 @@
 import { WBTariffsParser } from "#modules/index.js";
-import knex, { migrate, seed } from "#postgres/knex.js";
+import { migrate, seed } from "#postgres/knex.js";
 
 const wbTariffsParser: WBTariffsParser = new WBTariffsParser();
 
