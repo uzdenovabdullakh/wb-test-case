@@ -86,11 +86,11 @@ export class WBTariffsParser {
         console.log(`${this.loggerPrefix} WB Parse task is running ...`);
 
         try {
-            const date = formatDate();
+            const today = formatDate();
             const response: AxiosResponse<WBDataType> = await this.api.get(
                 this.wbTariffsBoxUri,
                 {
-                    params: { date },
+                    params: { date: today },
                 },
             );
 
@@ -145,17 +145,19 @@ export class WBTariffsParser {
         REPOSITORY
         TODO: Transfer all code below to original repository module
     */
-    private async getSpreadsheetIds(): Promise<string[]> {
+    private async getSpreadsheetIds(): Promise<string[] | void> {
         // Get Spreadsheet IDs
         const googleSheetRows: SpreadsheetDataRowType[] = await knex
             .select("*")
             .from("spreadsheets");
         const googleSheetIds = googleSheetRows.map((row) => row.spreadsheet_id);
 
-        if (!googleSheetIds || googleSheetIds.length) {
+        if (!googleSheetIds || googleSheetIds.length <= 0) {
             console.error(
                 "Can`t find any Spreadsheet IDs in properly database table",
             );
+
+            return;
         }
 
         console.log(
@@ -167,63 +169,68 @@ export class WBTariffsParser {
 
     private async saveTariffs(data: WBDataType): Promise<void> {
         const adaptedData = this.adaptWBTariffsToDatabase(data);
-        // const savedData = await knex
-        //     .batchInsert("wb-tariffs-boxes", adaptedData, KNEX_BATCH_CHUNK_SIZE)
-        //     .catch((error) => {
-        //         console.error(
-        //             `Can't batch insert box tariffs to database. Error: `,
-        //             error,
-        //         );
-        //     });
-
         const savedData =
-            await this.insertTariffsIgnoreOnConflicts(adaptedData);
+            await this.batchInsertTariffsIgnoreOnConflicts(adaptedData);
 
-        console.log("SAVED DATA: ", savedData);
-
-        const savedDataLength = savedData || 0;
+        const savedDataLength = savedData.length || 0;
 
         console.log(
             `Saved box tariffs ${savedDataLength} / ${adaptedData.length}`,
         );
     }
 
-    private async insertTariffsIgnoreOnConflicts(
+    private async batchInsertTariffsIgnoreOnConflicts(
         adaptedData: WBAdaptedDataType[],
     ): Promise<WBAdaptedDataType[]> {
-        const chunkedUsers = splitToChunks(
+        const chunkedData = splitToChunks(
             adaptedData as [],
             KNEX_BATCH_CHUNK_SIZE,
         );
         const insertedTariffs: WBAdaptedDataType[] = [];
 
         await knex.transaction(async (trx) => {
-            for (const chunk of chunkedUsers) {
+            for (const chunk of chunkedData) {
                 const savedChunk = await trx<WBAdaptedDataType>(
-                    "wb-tariffs-boxes",
+                    "wb_tariffs_boxes",
                 )
                     .insert(chunk)
-                    .onConflict("compare-index")
-                    .merge();
-                insertedTariffs.push(
-                    savedChunk as unknown as WBAdaptedDataType,
-                );
+                    .onConflict("date_warehouse_index")
+                    .merge()
+                    .returning("*");
+
+                insertedTariffs.push(...(savedChunk as WBAdaptedDataType[]));
             }
         });
+
         return insertedTariffs;
     }
 
     private adaptWBTariffsToDatabase(data: WBDataType): WBAdaptedDataType[] {
-        const date = formatDate();
+        const today = formatDate();
         const { dtNextBox, dtTillMax, warehouseList } = data.response.data;
 
         const adaptedData: WBAdaptedDataType[] = warehouseList.map(
             (warehouse: WarehouseType) => {
+                const {
+                    boxDeliveryAndStorageExpr,
+                    boxDeliveryBase,
+                    boxDeliveryLiter,
+                    boxStorageBase,
+                    boxStorageLiter,
+                    warehouseName,
+                } = warehouse;
+
                 return {
-                    date,
-                    dtNextBox,
-                    dtTillMax,
-                    ...warehouse,
+                    date: today,
+                    dt_next_box: dtNextBox,
+                    dt_till_max: dtTillMax,
+                    box_delivery_and_storage_expr: boxDeliveryAndStorageExpr,
+                    box_delivery_base: boxDeliveryBase,
+                    box_delivery_liter: boxDeliveryLiter,
+                    box_storage_base: boxStorageBase,
+                    box_storage_liter: boxStorageLiter,
+                    warehouse_name: warehouseName,
+                    date_warehouse_index: `${today}|${warehouseName}`,
                 };
             },
         );
