@@ -5,6 +5,7 @@
 export async function up(knex) {
     return knex.schema.createTable("wb-tariffs-boxes", (table) => {
         table.increments("id").primary();
+        table.string("date");
         table.string("dtNextBox");
         table.string("dtTillMax");
         table.string("boxDeliveryAndStorageExpr");
@@ -13,6 +14,19 @@ export async function up(knex) {
         table.string("boxStorageBase");
         table.string("boxStorageLiter");
         table.string("warehouseName");
+
+        table.index(
+            [
+                "date",
+                "boxDeliveryAndStorageExpr",
+                "boxDeliveryBase",
+                "boxDeliveryLiter",
+                "boxStorageBase",
+                "boxStorageLiter",
+                "warehouseName",
+            ],
+            "compare-index",
+        );
         table.timestamps(true, true);
     });
 }

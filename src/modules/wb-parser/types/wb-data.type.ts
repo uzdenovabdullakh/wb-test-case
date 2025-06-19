@@ -22,6 +22,7 @@ export type WBDataType = {
 };
 
 export type WBAdaptedDataType = {
+    date: string;
     dtNextBox: string;
     dtTillMax: string;
 } & WarehouseType;

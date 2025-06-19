@@ -14,6 +14,8 @@ import {
     WBDataType,
 } from "./types/wb-data.type.js";
 import { SpreadsheetDataRowType } from "./types/spreadsheed.type.js";
+import { formatDate } from "#utils/date.js";
+import { splitToChunks } from "#utils/common.js";
 
 export class WBTariffsParser {
     private readonly loggerPrefix = "[WBParser]";
@@ -70,8 +72,11 @@ export class WBTariffsParser {
                 return;
             }
 
+            // Save tariffs to database
+            await this.saveTariffs(wbData);
+
             // Insert data to Google Spreadsheet
-            await this.insertDataToGoogleSpreadSheet(wbData);
+            // await this.insertDataToGoogleSpreadSheet(wbData);
         } catch (error) {
             console.log(`WB Parse or Upload data error: `, error);
         }
@@ -81,8 +86,12 @@ export class WBTariffsParser {
         console.log(`${this.loggerPrefix} WB Parse task is running ...`);
 
         try {
+            const date = formatDate();
             const response: AxiosResponse<WBDataType> = await this.api.get(
                 this.wbTariffsBoxUri,
+                {
+                    params: { date },
+                },
             );
 
             if (!response?.data) {
@@ -90,26 +99,8 @@ export class WBTariffsParser {
             }
 
             const { data } = response;
-            const adaptedData = this.adaptWBTariffsToDatabase(data);
-            // FIXME: Better wrap "knex" to another one abstraction lvl, like a Repository
-            const savedData = await knex
-                .batchInsert(
-                    "wb-tariffs-boxes",
-                    adaptedData,
-                    KNEX_BATCH_CHUNK_SIZE,
-                )
-                .catch((error) => {
-                    console.error(
-                        `Can't batch insert box tariffs to database. Error: `,
-                        error,
-                    );
-                });
 
-            const savedDataLength = savedData || 0;
-
-            console.log(
-                `Saved box tariffs ${savedDataLength} / ${adaptedData.length}`,
-            );
+            return data;
         } catch (error) {
             console.error(
                 `Can't fetch data from ${this.apiBaseUrl}.${this.wbTariffsBoxUri}. Error: `,
@@ -150,6 +141,10 @@ export class WBTariffsParser {
         const sheets = new google.sheets_v4.Sheets({ auth });
     }
 
+    /*
+        REPOSITORY
+        TODO: Transfer all code below to original repository module
+    */
     private async getSpreadsheetIds(): Promise<string[]> {
         // Get Spreadsheet IDs
         const googleSheetRows: SpreadsheetDataRowType[] = await knex
@@ -170,12 +165,62 @@ export class WBTariffsParser {
         return googleSheetIds;
     }
 
+    private async saveTariffs(data: WBDataType): Promise<void> {
+        const adaptedData = this.adaptWBTariffsToDatabase(data);
+        // const savedData = await knex
+        //     .batchInsert("wb-tariffs-boxes", adaptedData, KNEX_BATCH_CHUNK_SIZE)
+        //     .catch((error) => {
+        //         console.error(
+        //             `Can't batch insert box tariffs to database. Error: `,
+        //             error,
+        //         );
+        //     });
+
+        const savedData =
+            await this.insertTariffsIgnoreOnConflicts(adaptedData);
+
+        console.log("SAVED DATA: ", savedData);
+
+        const savedDataLength = savedData || 0;
+
+        console.log(
+            `Saved box tariffs ${savedDataLength} / ${adaptedData.length}`,
+        );
+    }
+
+    private async insertTariffsIgnoreOnConflicts(
+        adaptedData: WBAdaptedDataType[],
+    ): Promise<WBAdaptedDataType[]> {
+        const chunkedUsers = splitToChunks(
+            adaptedData as [],
+            KNEX_BATCH_CHUNK_SIZE,
+        );
+        const insertedTariffs: WBAdaptedDataType[] = [];
+
+        await knex.transaction(async (trx) => {
+            for (const chunk of chunkedUsers) {
+                const savedChunk = await trx<WBAdaptedDataType>(
+                    "wb-tariffs-boxes",
+                )
+                    .insert(chunk)
+                    .onConflict("compare-index")
+                    .merge();
+                insertedTariffs.push(
+                    savedChunk as unknown as WBAdaptedDataType,
+                );
+            }
+        });
+        return insertedTariffs;
+    }
+
     private adaptWBTariffsToDatabase(data: WBDataType): WBAdaptedDataType[] {
+        const date = formatDate();
         const { dtNextBox, dtTillMax, warehouseList } = data.response.data;
 
         const adaptedData: WBAdaptedDataType[] = warehouseList.map(
             (warehouse: WarehouseType) => {
                 return {
+                    date,
                     dtNextBox,
                     dtTillMax,
                     ...warehouse,
