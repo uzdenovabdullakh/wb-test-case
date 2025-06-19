@@ -191,9 +191,17 @@ export class WBTariffsParser {
                 {},
             );
 
+            // Sort by Coefs
+            const sortedData = adaptedData.sort((a, b) => {
+                return (
+                    parseInt(a.box_delivery_and_storage_expr) -
+                    parseInt(b.box_delivery_and_storage_expr)
+                );
+            });
+
             // insert table body
             const chunkedTariffs = splitToChunks(
-                adaptedData as [],
+                sortedData as [],
                 GOOGLE_SPREADSHEET_DATA_CHUNK_SIZE,
             );
 
@@ -231,7 +239,7 @@ export class WBTariffsParser {
                 uploadedRowsSize += chunk.length;
 
                 console.log(
-                    `[Google Spreadsheet] [${spreadsheetId}](${serviceSheetName}) uploaded rows: ${uploadedRowsSize}/${adaptedData.length}`,
+                    `[Google Spreadsheet] [${spreadsheetId}](${serviceSheetName}) uploaded rows: ${uploadedRowsSize}/${sortedData.length}`,
                 );
             }
         }
