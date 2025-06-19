@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import { z } from "zod";
+
 dotenv.config();
 
 const envSchema = z.object({
@@ -19,6 +20,8 @@ const envSchema = z.object({
             .regex(/^[0-9]+$/)
             .transform((value) => parseInt(value)),
     ]),
+    WB_API_KEY: z.string(),
+    GOOGLE_SERVICE_KEYS_JSON: z.string(),
 });
 
 const env = envSchema.parse({
@@ -29,6 +32,8 @@ const env = envSchema.parse({
     POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD,
     NODE_ENV: process.env.NODE_ENV,
     APP_PORT: process.env.APP_PORT,
+    WB_API_KEY: process.env.WB_API_KEY,
+    GOOGLE_SERVICE_KEYS_JSON: process.env.GOOGLE_SERVICE_KEYS_JSON,
 });
 
 export default env;

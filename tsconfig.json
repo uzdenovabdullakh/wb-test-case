@@ -10,19 +10,9 @@
         "rootDir": "./src",
         "outDir": "./dist",
         "paths": {
-            "#*": [
-                "./src/*",
-                "./dist/*"
-            ]
+            "#*": ["./src/*", "./dist/*"]
         }
     },
-    "include": [
-        "src/**/*.ts",
-        "src/**/*.js",
-    ],
-    "exclude": [
-        "node_modules",
-        "src/**/*.test.*",
-        "src/**/*.spec.*"
-    ]
+    "include": ["src/**/*.ts", "src/**/*.js"],
+    "exclude": ["node_modules", "src/**/*.test.*", "src/**/*.spec.*"]
 }
