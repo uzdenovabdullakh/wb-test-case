@@ -3,16 +3,18 @@
  * @returns {Promise<void>}
  */
 export async function up(knex) {
-    return knex.schema.createTable("wb-tariffs-boxes", (table) => {
+    return knex.schema.createTable("wb_tariffs_boxes", (table) => {
         table.increments("id").primary();
-        table.string("dtNextBox");
-        table.string("dtTillMax");
-        table.string("boxDeliveryAndStorageExpr");
-        table.string("boxDeliveryBase");
-        table.string("boxDeliveryLiter");
-        table.string("boxStorageBase");
-        table.string("boxStorageLiter");
-        table.string("warehouseName");
+        table.string("date");
+        table.string("dt_next_box");
+        table.string("dt_till_max");
+        table.string("box_delivery_and_storage_expr");
+        table.string("box_delivery_base");
+        table.string("box_delivery_liter");
+        table.string("box_storage_base");
+        table.string("box_storage_liter");
+        table.string("warehouse_name");
+        table.string("date_warehouse_index").unique();
         table.timestamps(true, true);
     });
 }
@@ -22,5 +24,5 @@ export async function up(knex) {
  * @returns {Promise<void>}
  */
 export async function down(knex) {
-    return knex.schema.dropTable("wb-tariffs-boxes");
+    return knex.schema.dropTable("wb_tariffs_boxes");
 }

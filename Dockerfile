@@ -19,6 +19,12 @@ FROM node:20-alpine AS prod
 
 WORKDIR /app
 
+# your .env file
+COPY ./.env .
+
+# your google credentials file
+COPY ./wb-test-463312-676051ebcfc8.json .
+
 COPY --from=build /app/package*.json .
 COPY --from=deps-prod /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist

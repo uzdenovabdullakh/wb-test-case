@@ -37,6 +37,7 @@
         "log4js": "^6.9.1",
         "node-cron": "4.1.0",
         "pg": "^8.11.3",
+        "sqlite3": "^5.1.7",
         "zod": "^3.23.8"
     },
     "devDependencies": {
