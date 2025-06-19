@@ -5,11 +5,15 @@ import { AxiosInstance, AxiosResponse } from "axios";
 
 import { createAPI } from "#services/api.js";
 
-import { CRON_SCHEDULE } from "./constants.js";
+import {
+    CRON_SCHEDULE,
+    GOOGLE_SPREADSHEET_DATA_CHUNK_SIZE,
+} from "./constants.js";
 
-import { WBDataType } from "./types/wb-data.type.js";
+import { WBAdaptedDataType, WBDataType } from "./types/wb-data.type.js";
 import { formatDate } from "#utils/date.js";
 import { WBTariffsParserRepository } from "./wb-tariffs-parser.repository.js";
+import { getGoogleColumnLetterByNum, splitToChunks } from "#utils/common.js";
 export class WBTariffsParser {
     private readonly loggerPrefix = "[WBParser]";
     private readonly apiBaseUrl =
@@ -56,8 +60,6 @@ export class WBTariffsParser {
 
     private async parseAndUpload() {
         try {
-            await this.insertDataToGoogleSpreadSheet(null);
-
             // Fetch data from WB
             const wbData = await this.parse();
 
@@ -68,10 +70,15 @@ export class WBTariffsParser {
             }
 
             // Save tariffs to database
-            await this.wbTariffsParserRepository.saveTariffs(wbData);
+            const savedTariffs =
+                await this.wbTariffsParserRepository.saveTariffs(wbData);
+
+            if (!savedTariffs || savedTariffs.length <= 0) {
+                return;
+            }
 
             // Insert data to Google Spreadsheet
-            // await this.insertDataToGoogleSpreadSheet(wbData);
+            await this.insertDataToGoogleSpreadSheet(savedTariffs);
         } catch (error) {
             console.log(`WB Parse or Upload data error: `, error);
         }
@@ -104,9 +111,23 @@ export class WBTariffsParser {
         }
     }
 
-    private async insertDataToGoogleSpreadSheet(data: WBDataType | null) {
+    private async insertDataToGoogleSpreadSheet(
+        adaptedData: WBAdaptedDataType[],
+    ) {
         const spreadsheetIds =
             await this.wbTariffsParserRepository.getSpreadsheetIds();
+
+        if (!spreadsheetIds || spreadsheetIds.length <= 0) {
+            console.error(
+                "Can`t find any Spreadsheet IDs in properly database table",
+            );
+
+            return;
+        }
+
+        console.log(
+            `Found ${spreadsheetIds.length} Google Spreadsheet ids to insert in`,
+        );
 
         // Auth in Google APIs
         const googleServiceKeysFileName = process.env
@@ -135,5 +156,84 @@ export class WBTariffsParser {
             scopes: ["https://www.googleapis.com/auth/spreadsheets"],
         });
         const sheets = new google.sheets_v4.Sheets({ auth });
+
+        const googleSheetColumnsCount = adaptedData.length;
+        const googleSheetLastColumnLetter = getGoogleColumnLetterByNum(
+            googleSheetColumnsCount,
+        );
+
+        const tableHeader = [
+            [
+                "date",
+                "dt_next_box",
+                "dt_till_max",
+                "box_delivery_and_storage_expr",
+                "box_delivery_base",
+                "box_delivery_liter",
+                "box_storage_base",
+                "box_storage_liter",
+                "warehouse_name",
+            ],
+        ];
+
+        // Insert data
+        for (const spreadsheetId of spreadsheetIds) {
+            // insert header
+            await sheets.spreadsheets.values.update(
+                {
+                    spreadsheetId,
+                    range: `${serviceSheetName}!A1:${googleSheetLastColumnLetter}${googleSheetColumnsCount}`,
+                    valueInputOption: "RAW",
+                    requestBody: {
+                        values: tableHeader,
+                    },
+                },
+                {},
+            );
+
+            // insert table body
+            const chunkedTariffs = splitToChunks(
+                adaptedData as [],
+                GOOGLE_SPREADSHEET_DATA_CHUNK_SIZE,
+            );
+
+            let uploadedRowsSize = 0;
+
+            for (let i = 0; i < chunkedTariffs.length; i++) {
+                const chunk = chunkedTariffs[i];
+                const rangeStart = `!A${i + 2}`;
+                const rangeEnd = `${googleSheetColumnsCount}${i + chunk.length}`;
+                const range = `${serviceSheetName}${rangeStart}:${rangeEnd}`;
+                const mappedChunk = chunk.map((row: WBAdaptedDataType) => [
+                    row.date,
+                    row.dt_next_box,
+                    row.dt_till_max,
+                    row.box_delivery_and_storage_expr,
+                    row.box_delivery_base,
+                    row.box_delivery_liter,
+                    row.box_storage_base,
+                    row.box_storage_liter,
+                    row.warehouse_name,
+                ]);
+
+                await sheets.spreadsheets.values.update(
+                    {
+                        spreadsheetId,
+                        range,
+                        valueInputOption: "RAW",
+                        requestBody: {
+                            values: mappedChunk,
+                        },
+                    },
+                    {},
+                );
+
+                uploadedRowsSize += chunk.length;
+
+                console.log(
+                    `[Google Spreadsheet] [${spreadsheetId}](${serviceSheetName}) uploaded rows: ${uploadedRowsSize}/${adaptedData.length}`,
+                );
+            }
+        }
     }
 }

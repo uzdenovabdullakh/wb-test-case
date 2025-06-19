@@ -12,29 +12,17 @@ import { formatDate } from "#utils/date.js";
 import { splitToChunks } from "#utils/common.js";
 
 export class WBTariffsParserRepository {
-    public async getSpreadsheetIds(): Promise<string[] | void> {
+    public async getSpreadsheetIds(): Promise<string[]> {
         // Get Spreadsheet IDs
         const googleSheetRows: SpreadsheetDataRowType[] = await knex
             .select("*")
             .from("spreadsheets");
         const googleSheetIds = googleSheetRows.map((row) => row.spreadsheet_id);
 
-        if (!googleSheetIds || googleSheetIds.length <= 0) {
-            console.error(
-                "Can`t find any Spreadsheet IDs in properly database table",
-            );
-
-            return;
-        }
-
-        console.log(
-            `Found ${googleSheetIds.length} Google Spreadsheet ids to insert in`,
-        );
-
         return googleSheetIds;
     }
 
-    public async saveTariffs(data: WBDataType): Promise<void> {
+    public async saveTariffs(data: WBDataType): Promise<WBAdaptedDataType[]> {
         const adaptedData = this.adaptWBTariffsToDatabase(data);
         const savedData =
             await this.batchInsertTariffsIgnoreOnConflicts(adaptedData);
@@ -44,6 +32,8 @@ export class WBTariffsParserRepository {
         console.log(
             `Saved box tariffs ${savedDataLength} / ${adaptedData.length}`,
         );
+
+        return savedData;
     }
 
     public async batchInsertTariffsIgnoreOnConflicts(

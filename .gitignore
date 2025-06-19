@@ -2,4 +2,4 @@ node_modules
 .local
 .env
 dist
-wb-test-463312-40ff1e97fb23.json
+wb-test-*.json
