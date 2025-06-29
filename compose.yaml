@@ -60,6 +60,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PORT: ${APP_PORT}
       NODE_ENV: production
+      WB_API_TOKEN: ${WB_API_TOKEN}
+      GOOGLE_CREDENTIALS: ${GOOGLE_CREDENTIALS}
+      GOOGLE_SHEET_IDS: ${GOOGLE_SHEET_IDS}
 
     ports:
       - ${APP_PORT}:${APP_PORT}
